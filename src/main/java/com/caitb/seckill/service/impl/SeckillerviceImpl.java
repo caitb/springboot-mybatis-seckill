@@ -1,5 +1,6 @@
 package com.caitb.seckill.service.impl;
 
+import com.caitb.seckill.aop.Servicelock;
 import com.caitb.seckill.dto.Exposer;
 import com.caitb.seckill.dto.SeckillExecution;
 import com.caitb.seckill.entity.Seckill;
@@ -21,6 +22,8 @@ import org.springframework.util.DigestUtils;
 
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @作者 cai_tb
@@ -29,6 +32,11 @@ import java.util.List;
 @Service
 @Slf4j
 public class SeckillerviceImpl implements Seckillervice {
+    /**
+     * 思考：为什么不用synchronized
+     * service 默认是单例的，并发下lock只有一个实例
+     */
+    private Lock lock = new ReentrantLock(true);//互斥锁 参数默认false，不公平锁
 
     // 用于混淆md5
     private final static String slat = "fjewjffjngnrelljgrlr*^*2323**&*223fjelfj00939ddl#%!felfe&*^$!fefef90002";
@@ -63,6 +71,11 @@ public class SeckillerviceImpl implements Seckillervice {
         return seckillMapper.selectByPrimaryKey(seckillId);
     }
 
+    @Override
+    public int updateBySeckillId(Seckill seckill) {
+        return seckillMapper.updateByPrimaryKeySelective(seckill);
+    }
+
     /**
      * 在秒杀开启时输出秒杀接口的地址，否则输出系统时间跟秒杀地址
      *
@@ -92,6 +105,30 @@ public class SeckillerviceImpl implements Seckillervice {
         return md5;
     }
 
+    @Transactional
+    public synchronized SeckillExecution seckillSynchronized(Long seckillId, Long userPhone, String md5) throws SeckillException, RepeatKillException, SeckillCloseException {
+        log.info("-------------------------seckillSynchronized 处理秒杀");
+        return executeSeckill(seckillId, userPhone, md5);
+    }
+
+    @Transactional
+    public SeckillExecution seckillLock(Long seckillId, Long userPhone, String md5) throws SeckillException, RepeatKillException, SeckillCloseException {
+        log.info("-------------------------seckillLock 处理秒杀");
+        try {
+            lock.lock();
+            return executeSeckill(seckillId, userPhone, md5);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Transactional
+    @Servicelock
+    public SeckillExecution seckillAopLock(Long seckillId, Long userPhone, String md5) throws SeckillException, RepeatKillException, SeckillCloseException {
+        log.info("-------------------------seckillAopLock 处理秒杀");
+        return executeSeckill(seckillId, userPhone, md5);
+    }
+
     /**
      * 执行秒杀操作，失败的，失败我们就抛出异常
      *
@@ -102,7 +139,9 @@ public class SeckillerviceImpl implements Seckillervice {
      */
     @Transactional
     @Override
+    //@Servicelock
     public SeckillExecution executeSeckill(Long seckillId, Long userPhone, String md5) throws SeckillException, RepeatKillException, SeckillCloseException {
+        log.info("正在处理 - {} - 的秒杀请求，seckillId: {}", userPhone, seckillId);
         if (md5 == null || !md5.equals(getMD5(seckillId))) {
             throw new SeckillException("seckill data rewrite");
         }

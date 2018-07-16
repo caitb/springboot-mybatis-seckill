@@ -35,4 +35,12 @@
     WHERE sk.seckill_id = #{seckillId} AND sk.user_phone = #{userPhone}
   </select>
 
+  <select id="countBySeckillId" resultType="Integer">
+    SELECT COUNT(1) FROM success_killed WHERE seckill_id = #{seckillId}
+  </select>
+
+  <delete id="deleteBySeckillId">
+    DELETE FROM success_killed WHERE seckill_id = #{seckillId}
+  </delete>
+
 </mapper>

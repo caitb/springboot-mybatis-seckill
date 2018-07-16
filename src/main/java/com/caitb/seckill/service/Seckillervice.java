@@ -1,11 +1,13 @@
 package com.caitb.seckill.service;
 
+import com.caitb.seckill.aop.Servicelock;
 import com.caitb.seckill.dto.Exposer;
 import com.caitb.seckill.dto.SeckillExecution;
 import com.caitb.seckill.entity.Seckill;
 import com.caitb.seckill.exception.RepeatKillException;
 import com.caitb.seckill.exception.SeckillCloseException;
 import com.caitb.seckill.exception.SeckillException;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -24,7 +26,7 @@ import java.util.List;
 public interface Seckillervice {
 
     /**
-     * 查询所有秒杀记录
+     * 查询所有秒杀商品
      *
      * @return
      */
@@ -38,6 +40,8 @@ public interface Seckillervice {
      */
     Seckill getSeckill(Long seckillId);
 
+    int updateBySeckillId(Seckill seckill);
+
     /**
      * 秒杀开启是输出秒杀接口地址
      * 否则输出系统时间和秒杀时间
@@ -45,6 +49,12 @@ public interface Seckillervice {
      * @param seckillId
      */
     Exposer exportSeckillUrl(Long seckillId);
+
+    SeckillExecution seckillSynchronized(Long seckillId, Long userPhone, String md5);
+
+    SeckillExecution seckillLock(Long seckillId, Long userPhone, String md5);
+
+    SeckillExecution seckillAopLock(Long seckillId, Long userPhone, String md5);
 
     /**
      * 执行秒杀操作

@@ -8,6 +8,7 @@ import com.caitb.seckill.enums.SeckillStatEnum;
 import com.caitb.seckill.exception.RepeatKillException;
 import com.caitb.seckill.exception.SeckillCloseException;
 import com.caitb.seckill.service.Seckillervice;
+import com.caitb.seckill.service.SuccessKilledService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -27,11 +28,13 @@ import java.util.List;
 public class SeckillController {
 
     @Autowired
-    private Seckillervice Seckillervice;
+    private Seckillervice seckillervice;
+    @Autowired
+    private SuccessKilledService successKilledService;
 
     @GetMapping("")
     public String list(Model model) {
-        List<Seckill> seckills = Seckillervice.listSeckill();
+        List<Seckill> seckills = seckillervice.listSeckill();
         model.addAttribute("seckills", seckills);
         return "seckill/list";
     }
@@ -41,7 +44,7 @@ public class SeckillController {
         if (seckillId == null) {
             return "forward:seckill/list";
         }
-        Seckill seckill = Seckillervice.getSeckill(seckillId);
+        Seckill seckill = seckillervice.getSeckill(seckillId);
         if (seckill == null) {
             return "forward:seckill/list";
         }
@@ -60,7 +63,7 @@ public class SeckillController {
     public SeckillResult<Exposer> exposer(@PathVariable(name = "seckillId")Long seckillId) {
         SeckillResult<Exposer> result;
         try {
-            Exposer exposer = Seckillervice.exportSeckillUrl(seckillId);
+            Exposer exposer = seckillervice.exportSeckillUrl(seckillId);
             result = new SeckillResult<>(true, exposer);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
@@ -81,13 +84,14 @@ public class SeckillController {
     @ResponseBody
     public SeckillResult<SeckillExecution> execute(@PathVariable(name ="seckillId")Long seckillId,
                                                    @PathVariable(name = "md5")String md5,
-                                                   @CookieValue(value = "userPhone", required = false) Long userPhone) {
+                                                   //@CookieValue(value = "userPhone", required = false)
+                                                               Long userPhone) {
         if (userPhone == null) {
             return new SeckillResult<SeckillExecution>(false, "未注册");
         }
         SeckillResult<SeckillExecution> result;
         try {
-            SeckillExecution execution = Seckillervice.executeSeckill(seckillId, userPhone, md5);
+            SeckillExecution execution = seckillervice.executeSeckill(seckillId, userPhone, md5);
             return new SeckillResult<SeckillExecution>(true, execution);
         } catch (RepeatKillException e) {
             // 重复秒杀
@@ -116,4 +120,5 @@ public class SeckillController {
         Date now = new Date();
         return new SeckillResult<Long>(true, now.getTime());
     }
+
 }
